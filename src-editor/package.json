@@ -25,7 +25,7 @@
         "@vitejs/plugin-react": "^5.1.0",
         "blockly": "^11.2.2",
         "file-selector": "^2.1.2",
-        "monaco-editor": "~0.54.0",
+        "monaco-editor": "~0.55.1",
         "openai": "^5.23.2",
         "react": "^18.3.1",
         "react-bem-helper": "^1.4.1",
