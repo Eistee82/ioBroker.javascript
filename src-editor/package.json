@@ -14,7 +14,7 @@
         "@iobroker/types": "^7.0.7",
         "@module-federation/runtime": "^0.21.6",
         "@module-federation/vite": "^1.9.4",
-        "@mui/icons-material": "^6.5.0",
+        "@mui/icons-material": "^7.3.7",
         "@mui/material": "^6.5.0",
         "@mui/x-date-pickers": "^7.29.4",
         "@sentry/browser": "^10.22.0",
