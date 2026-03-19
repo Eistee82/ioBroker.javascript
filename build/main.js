@@ -903,6 +903,221 @@ class JavaScript extends adapter_core_1.Adapter {
                 }
                 break;
             }
+            case 'chatCompletion': {
+                // Proxy chat completion requests to an OpenAI-compatible API endpoint
+                if (obj.callback) {
+                    const baseUrl = (obj.message?.baseUrl || '').trim();
+                    const apiKey = (obj.message?.apiKey || '').trim();
+                    const chatModel = (obj.message?.model || '').trim();
+                    const messages = obj.message?.messages;
+                    const provider = (obj.message?.provider || 'openai').trim();
+                    // Anthropic, Gemini, and DeepSeek always require an API key; OpenAI-compatible allows empty key with custom base URL
+                    if (!apiKey &&
+                        (provider === 'anthropic' || provider === 'gemini' || provider === 'deepseek' || !baseUrl)) {
+                        this.sendTo(obj.from, obj.command, { error: 'No API key provided' }, obj.callback);
+                        break;
+                    }
+                    if (!chatModel || !messages) {
+                        this.sendTo(obj.from, obj.command, { error: 'Model and messages are required' }, obj.callback);
+                        break;
+                    }
+                    let url;
+                    const chatHeaders = {
+                        'Content-Type': 'application/json',
+                    };
+                    let bodyObj;
+                    if (provider === 'anthropic') {
+                        url = 'https://api.anthropic.com/v1/messages';
+                        chatHeaders['x-api-key'] = apiKey;
+                        chatHeaders['anthropic-version'] = '2023-06-01';
+                        const systemMessages = messages.filter((m) => m.role === 'system');
+                        const nonSystemMessages = messages.filter((m) => m.role !== 'system');
+                        const systemText = systemMessages.map((m) => m.content).join('\n\n');
+                        bodyObj = {
+                            model: chatModel,
+                            max_tokens: 8192,
+                            stream: false,
+                            ...(systemText ? { system: systemText } : {}),
+                            messages: nonSystemMessages,
+                        };
+                    }
+                    else if (provider === 'gemini') {
+                        url = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+                        if (apiKey) {
+                            chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                        bodyObj = { model: chatModel, messages, stream: false };
+                    }
+                    else if (provider === 'deepseek') {
+                        url = 'https://api.deepseek.com/chat/completions';
+                        chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        bodyObj = { model: chatModel, messages, stream: false };
+                    }
+                    else {
+                        url = `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`;
+                        if (apiKey) {
+                            chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                        bodyObj = { model: chatModel, messages, stream: false };
+                    }
+                    const body = JSON.stringify(bodyObj);
+                    const bodyBuffer = Buffer.from(body, 'utf8');
+                    chatHeaders['Content-Length'] = bodyBuffer.length;
+                    let urlObj;
+                    try {
+                        urlObj = new URL(url);
+                    }
+                    catch {
+                        this.sendTo(obj.from, obj.command, { error: `Invalid API URL: ${url}` }, obj.callback);
+                        break;
+                    }
+                    const isHttps = urlObj.protocol === 'https:';
+                    const requestModule = isHttps ? https : http;
+                    const req = requestModule.request(url, {
+                        method: 'POST',
+                        headers: chatHeaders,
+                        timeout: 600000,
+                    }, res => {
+                        let data = '';
+                        res.on('data', (chunk) => {
+                            data += chunk.toString();
+                        });
+                        res.on('end', () => {
+                            if (res.statusCode === 200) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const content = provider === 'anthropic'
+                                        ? parsed.content?.[0]?.text || ''
+                                        : parsed.choices?.[0]?.message?.content || '';
+                                    if (!content) {
+                                        this.sendTo(obj.from, obj.command, { error: 'Empty response from API' }, obj.callback);
+                                    }
+                                    else {
+                                        this.sendTo(obj.from, obj.command, { success: true, content }, obj.callback);
+                                    }
+                                }
+                                catch {
+                                    this.sendTo(obj.from, obj.command, { error: 'Invalid JSON response from API' }, obj.callback);
+                                }
+                            }
+                            else {
+                                let errorMsg = `API returned status ${res.statusCode}`;
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.error?.message) {
+                                        errorMsg = parsed.error.message;
+                                    }
+                                }
+                                catch {
+                                    // ignore parse error
+                                }
+                                this.sendTo(obj.from, obj.command, { error: errorMsg }, obj.callback);
+                            }
+                        });
+                    });
+                    req.on('error', (err) => {
+                        this.sendTo(obj.from, obj.command, { error: `Connection failed: ${err.message}` }, obj.callback);
+                    });
+                    req.on('timeout', () => {
+                        req.destroy();
+                        this.sendTo(obj.from, obj.command, { error: 'Connection timeout (600s)' }, obj.callback);
+                    });
+                    req.write(bodyBuffer);
+                    req.end();
+                }
+                break;
+            }
+            case 'testApiConnection': {
+                // Test connection to an OpenAI-compatible API endpoint
+                if (obj.callback) {
+                    const baseUrl = (obj.message?.baseUrl || '').trim();
+                    const apiKey = (obj.message?.apiKey || '').trim();
+                    const provider = (obj.message?.provider || 'openai').trim();
+                    // Anthropic, Gemini, and DeepSeek always require an API key; OpenAI-compatible allows empty key with custom base URL
+                    if (!apiKey &&
+                        (provider === 'anthropic' || provider === 'gemini' || provider === 'deepseek' || !baseUrl)) {
+                        this.sendTo(obj.from, obj.command, { error: 'No API key provided' }, obj.callback);
+                        break;
+                    }
+                    let url;
+                    const testHeaders = {
+                        'Content-Type': 'application/json',
+                    };
+                    if (provider === 'anthropic') {
+                        url = 'https://api.anthropic.com/v1/models';
+                        testHeaders['x-api-key'] = apiKey;
+                        testHeaders['anthropic-version'] = '2023-06-01';
+                    }
+                    else if (provider === 'gemini') {
+                        url = 'https://generativelanguage.googleapis.com/v1beta/openai/models';
+                        if (apiKey) {
+                            testHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                    }
+                    else if (provider === 'deepseek') {
+                        url = 'https://api.deepseek.com/models';
+                        testHeaders.Authorization = `Bearer ${apiKey}`;
+                    }
+                    else {
+                        url = `${baseUrl || 'https://api.openai.com/v1'}/models`;
+                        if (apiKey) {
+                            testHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                    }
+                    let urlObj;
+                    try {
+                        urlObj = new URL(url);
+                    }
+                    catch {
+                        this.sendTo(obj.from, obj.command, { error: `Invalid API URL: ${url}` }, obj.callback);
+                        break;
+                    }
+                    const isHttps = urlObj.protocol === 'https:';
+                    const requestModule = isHttps ? https : http;
+                    const req = requestModule.request(url, {
+                        method: 'GET',
+                        headers: testHeaders,
+                        timeout: 10000,
+                    }, res => {
+                        let data = '';
+                        res.on('data', (chunk) => {
+                            data += chunk.toString();
+                        });
+                        res.on('end', () => {
+                            if (res.statusCode === 200) {
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    const models = (parsed.data || [])
+                                        .map((m) => m.id.startsWith('models/') ? m.id.substring(7) : m.id)
+                                        .sort();
+                                    this.sendTo(obj.from, obj.command, { success: true, models, count: models.length }, obj.callback);
+                                }
+                                catch {
+                                    this.sendTo(obj.from, obj.command, { error: 'Invalid JSON response from API' }, obj.callback);
+                                }
+                            }
+                            else if (res.statusCode === 401) {
+                                this.sendTo(obj.from, obj.command, { error: 'Invalid API key (401)' }, obj.callback);
+                            }
+                            else if (res.statusCode === 403) {
+                                this.sendTo(obj.from, obj.command, { error: 'Access denied (403)' }, obj.callback);
+                            }
+                            else {
+                                this.sendTo(obj.from, obj.command, { error: `API returned status ${res.statusCode}` }, obj.callback);
+                            }
+                        });
+                    });
+                    req.on('error', (err) => {
+                        this.sendTo(obj.from, obj.command, { error: `Connection failed: ${err.message}` }, obj.callback);
+                    });
+                    req.on('timeout', () => {
+                        req.destroy();
+                        this.sendTo(obj.from, obj.command, { error: 'Connection timeout (10s)' }, obj.callback);
+                    });
+                    req.end();
+                }
+                break;
+            }
             case 'prettier': {
                 // Format the code with Prettier
                 if (obj.message && typeof obj.message.code === 'string') {

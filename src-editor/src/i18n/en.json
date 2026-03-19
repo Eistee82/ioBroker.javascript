@@ -147,6 +147,7 @@
     "Month": "Month",
     "More": "More",
     "Name": "Name",
+    "No API key found": "No API key found",
     "No Chat GPT Key found": "No Chat GPT Key found",
     "No active host found": "No active host found",
     "Nothing found": "Nothing found",
@@ -266,6 +267,8 @@
     "You can use %s in the text to display current trigger value or %id to display the triggered object ID": "You can use %s in the text to display current trigger value, %id to use the triggered object ID, %name to show triggered object ID name or %old to use old trigger value",
     "You can use %s in the value to use the current trigger value or %id to display the triggered object ID": "You can use %s in the value to use the current trigger value, %id to use the triggered object ID, %name to show triggered object ID name or %old to use old trigger value",
     "You have to enter OpenAI API key in the configuration of javascript adapter.": "You have to enter OpenAI API key in the configuration of javascript adapter.",
+    "You have to enter at least one API key in the configuration of javascript adapter.": "You have to enter at least one API key (OpenAI, Anthropic or Gemini) in the configuration of javascript adapter.",
+    "Please select a valid model": "Please select a valid model",
     "[equal]": "[equal]",
     "[greater or equal]": "[greater or equal]",
     "[greater]": "[greater]",
@@ -377,5 +380,14 @@
     "with": "with",
     "with date": "with date",
     "with offset": "with offset",
-    "wizard": "Wizard"
+    "wizard": "Wizard",
+    "Loading models...": "Loading models...",
+    "Could not connect to API at %s": "Could not connect to API at %s",
+    "Invalid API key": "Invalid API key",
+    "Access denied by API": "Access denied by API",
+    "API error: %s": "API error: %s",
+    "Model \"%s\" not found": "Model \"%s\" not found",
+    "Request failed: %s": "Request failed: %s",
+    "Retry": "Retry",
+    "No running javascript instance found": "No running javascript instance found"
 }

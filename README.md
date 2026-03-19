@@ -25,6 +25,14 @@ Executes Javascript, Typescript Scripts.
 ## Changelog
 <!--
 	### **WORK IN PROGRESS**
+* Added support for custom OpenAI-compatible API endpoints (e.g. Ollama, LM Studio, Google Gemini, DeepSeek, OpenRouter)
+* Added configurable base URL in adapter settings
+* Models are now fetched dynamically from the configured API endpoint
+* Added "Test API connection" button in adapter settings
+* Added error handling with user-friendly messages for unreachable providers
+* Added retry functionality for failed model loading
+* All API calls (models + chat) are proxied server-side to avoid CORS issues with local providers
+* Strip LLM thinking artifacts from responses (for local models like Ollama)
 -->
 ### 9.0.18 (2026-01-11)
 * (@GermanBluefox) Corrected an error message with `lastSync`
@@ -40,7 +48,7 @@ Executes Javascript, Typescript Scripts.
 ### 9.0.10 (2025-07-27)
 * (@klein0r) Added Blockly block to format a numeric value
 * (@GermanBluefox) Fixing some blocks in blockly: cron, time
-* (@GermanBluefox) Added new block: "unconditional return"
+* (@GermanBluefox) Added a new block: "unconditional return"
 * (@GermanBluefox) Type definitions for TypeScript were updated
 * (@GermanBluefox) Corrected bug with deleting of sub-folders
 
