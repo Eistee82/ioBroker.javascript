@@ -26,6 +26,15 @@ Executes Javascript, Typescript Scripts.
 <!--
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (@GermanBluefox) Added support for plain import/export
+* (@GermanBluefox) Correcting error in configuration
+* (@GermanBluefox) disallow writing into node_modules folder by scripts
+* (@GermanBluefox) Correcting start of the script more than one time if restart is triggered
+* (@GermanBluefox) All delayed writings are stopped by the script stop
+* (@GermanBluefox) Added check if a script has been modified by another user/window
+* (@GermanBluefox) Make the instance number more prominent
+
 ### 9.1.1 (2026-03-19)
 * (GermanBluefox) Small GUI optimizations
 * Added support for custom OpenAI-compatible API endpoints (e.g. Ollama, LM Studio, Google Gemini, DeepSeek, OpenRouter)
