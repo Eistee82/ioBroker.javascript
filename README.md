@@ -27,20 +27,31 @@ Executes Javascript, Typescript Scripts.
     ### **WORK IN PROGRESS**
 -->
 ### WORK IN PROGRESS
-* Per-provider test buttons in adapter config (OpenAI, Anthropic, Gemini, DeepSeek, Custom API)
-* Optional API key field for custom base URL providers (e.g. Ollama without auth)
-* Provider icons on test buttons and in model dropdown
-* Human-readable HTTP error messages with API response details
-* Two-step AI code generation: plan first, then generate code
-* Collapsible plan view in AI code generator UI
-* Status display during generation ("Planning..." / "Generating code...")
-* Optimized prompts with code examples for better results with small local models
-* Compact API reference (docs-compact.md) for reduced context usage
-* Disable reasoning/thinking for local models (reasoning_effort: none)
-* TODO_DEVICE_ID placeholder when a required device is not in the device list
-* Node 25 compatibility: replaced deprecated rmdirSync with rmSync in build tasks
-* Flexible result area height in AI code generator (no extra scrollbar)
-* Added translations for all 11 languages
+* (@Eistee82) AI Chat: Full Blockly integration – AI button, chat panel with split layout, live workspace resize
+* (@Eistee82) AI Chat: Visual Blockly block preview in chat (dynamic height, same renderer as workspace)
+* (@Eistee82) AI Chat: Blockly diff view with block-level comparison (unchanged=faded, modified=visible, new=bordered)
+* (@Eistee82) AI Chat: Code mode generates Blockly XML with dedicated system prompt and block templates
+* (@Eistee82) AI Chat: Insert AI-generated blocks directly into the Blockly workspace with Accept/Reject
+* (@Eistee82) AI Chat: Dual context for Blockly – AI receives both generated JS (logic) and workspace XML (modifications)
+* (@Eistee82) AI Chat: Single system message for all providers (fixes Gemini context issues)
+* (@Eistee82) Per-provider test buttons in adapter config (OpenAI, Anthropic, Gemini, DeepSeek, Custom API)
+* (@Eistee82) Optional API key field for custom base URL providers (e.g. Ollama without auth)
+* (@Eistee82) Provider icons on test buttons and in model dropdown
+* (@Eistee82) Human-readable HTTP error messages with API response details
+* (@Eistee82) Disable reasoning/thinking for local models (reasoning_effort: none)
+* (@Eistee82) Node 25 compatibility: replaced deprecated rmdirSync with rmSync in build tasks
+* (@Eistee82) Removed old AI code generator (replaced by AI Chat)
+* (@Eistee82) AI Chat: Added tools for scripts (search, read, list) and object info with hierarchy
+* (@Eistee82) AI Chat: Markdown rendering with tables, headings, and lists
+* (@Eistee82) AI Chat: Redesigned input area with Chat/Agent mode selector and pill-style toolbar
+* (@Eistee82) AI Chat: Persist chat messages and input history in localStorage
+* (@Eistee82) AI Chat: Dark theme and color contrast improvements using MUI theme tokens
+* (@Eistee82) AI Chat: Code blocks survive theme switch (colorize instead of colorizeElement)
+* (@Eistee82) AI Chat: Detect tool calls in JSON text from models without native tool support
+* (@Eistee82) AI Chat: Show hint when model ignores tools in Agent mode
+* (@Eistee82) AI Chat: Inline completions enabled by default
+* (@Eistee82) AI Chat: Complete i18n translations for all 11 languages
+* (@Eistee82) AI Chat: Cleaned up dead code, removed debug output
 * (@GermanBluefox) Added support for plain import/export
 * (@GermanBluefox) Correcting error in configuration
 * (@GermanBluefox) disallow writing into node_modules folder by scripts

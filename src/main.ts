@@ -1161,6 +1161,7 @@ class JavaScript extends Adapter {
                     const apiKey = (obj.message?.apiKey || '').trim();
                     const chatModel = (obj.message?.model || '').trim();
                     const messages = obj.message?.messages;
+                    const tools = obj.message?.tools;
                     const provider = (obj.message?.provider || 'openai').trim();
                     // Anthropic, Gemini, and DeepSeek always require an API key; OpenAI-compatible allows empty key with custom base URL
                     if (
@@ -1200,11 +1201,11 @@ class JavaScript extends Adapter {
                         if (apiKey) {
                             chatHeaders.Authorization = `Bearer ${apiKey}`;
                         }
-                        bodyObj = { model: chatModel, messages, stream: false };
+                        bodyObj = { model: chatModel, messages, stream: false, ...(tools?.length ? { tools } : {}) };
                     } else if (provider === 'deepseek') {
                         url = 'https://api.deepseek.com/chat/completions';
                         chatHeaders.Authorization = `Bearer ${apiKey}`;
-                        bodyObj = { model: chatModel, messages, stream: false };
+                        bodyObj = { model: chatModel, messages, stream: false, ...(tools?.length ? { tools } : {}) };
                     } else {
                         url = `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`;
                         if (apiKey) {
@@ -1214,6 +1215,7 @@ class JavaScript extends Adapter {
                             model: chatModel,
                             messages,
                             stream: false,
+                            ...(tools?.length ? { tools } : {}),
                             // Disable thinking/reasoning for local models to save context and speed
                             ...(baseUrl ? { reasoning_effort: 'none' } : {}),
                         };
@@ -1250,11 +1252,14 @@ class JavaScript extends Adapter {
                                 if (res.statusCode === 200) {
                                     try {
                                         const parsed = JSON.parse(data);
-                                        const content =
-                                            provider === 'anthropic'
-                                                ? parsed.content?.[0]?.text || ''
-                                                : parsed.choices?.[0]?.message?.content || '';
-                                        if (!content) {
+                                        const message = provider === 'anthropic'
+                                            ? null
+                                            : parsed.choices?.[0]?.message;
+                                        const content = provider === 'anthropic'
+                                            ? parsed.content?.[0]?.text || ''
+                                            : message?.content || '';
+                                        const tool_calls = message?.tool_calls;
+                                        if (!content && !tool_calls?.length) {
                                             this.sendTo(
                                                 obj.from,
                                                 obj.command,
@@ -1265,7 +1270,7 @@ class JavaScript extends Adapter {
                                             this.sendTo(
                                                 obj.from,
                                                 obj.command,
-                                                { success: true, content },
+                                                { success: true, content, ...(tool_calls ? { tool_calls } : {}) },
                                                 obj.callback,
                                             );
                                         }
@@ -1314,6 +1319,258 @@ class JavaScript extends Adapter {
 
                     req.write(bodyBuffer);
                     req.end();
+                }
+                break;
+            }
+
+            case 'chatCompletionStream': {
+                // Streaming chat completion: writes chunks to a temporary state
+                if (obj.callback) {
+                    const baseUrl = (obj.message?.baseUrl || '').trim();
+                    const apiKey = (obj.message?.apiKey || '').trim();
+                    const chatModel = (obj.message?.model || '').trim();
+                    const messages = obj.message?.messages;
+                    const provider = (obj.message?.provider || 'openai').trim();
+                    const requestId = (obj.message?.requestId || '').trim();
+
+                    if (!requestId) {
+                        this.sendTo(obj.from, obj.command, { error: 'requestId is required' }, obj.callback);
+                        break;
+                    }
+                    if (
+                        !apiKey &&
+                        (provider === 'anthropic' || provider === 'gemini' || provider === 'deepseek' || !baseUrl)
+                    ) {
+                        this.sendTo(obj.from, obj.command, { error: 'No API key provided' }, obj.callback);
+                        break;
+                    }
+                    if (!chatModel || !messages) {
+                        this.sendTo(
+                            obj.from,
+                            obj.command,
+                            { error: 'Model and messages are required' },
+                            obj.callback,
+                        );
+                        break;
+                    }
+
+                    const streamStateId = `${this.namespace}.ai.stream.${requestId}`;
+
+                    // Acknowledge immediately
+                    this.sendTo(obj.from, obj.command, { success: true, requestId }, obj.callback);
+
+                    // Create temporary state for streaming, then start the request
+                    void this.setObjectNotExistsAsync(streamStateId, {
+                        type: 'state',
+                        common: {
+                            name: 'AI Stream',
+                            type: 'string',
+                            role: 'text',
+                            read: true,
+                            write: false,
+                        },
+                        native: {},
+                    }).then(() => {
+
+                    let url: string;
+                    const chatHeaders: Record<string, string | number> = {
+                        'Content-Type': 'application/json',
+                    };
+                    let bodyObj: Record<string, unknown>;
+
+                    if (provider === 'anthropic') {
+                        url = 'https://api.anthropic.com/v1/messages';
+                        chatHeaders['x-api-key'] = apiKey;
+                        chatHeaders['anthropic-version'] = '2023-06-01';
+                        const systemMessages = messages.filter((m: { role: string }) => m.role === 'system');
+                        const nonSystemMessages = messages.filter((m: { role: string }) => m.role !== 'system');
+                        const systemText = systemMessages.map((m: { content: string }) => m.content).join('\n\n');
+                        bodyObj = {
+                            model: chatModel,
+                            max_tokens: 8192,
+                            stream: true,
+                            ...(systemText ? { system: systemText } : {}),
+                            messages: nonSystemMessages,
+                        };
+                    } else if (provider === 'gemini') {
+                        url = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+                        if (apiKey) {
+                            chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                        bodyObj = { model: chatModel, messages, stream: true };
+                    } else if (provider === 'deepseek') {
+                        url = 'https://api.deepseek.com/chat/completions';
+                        chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        bodyObj = { model: chatModel, messages, stream: true };
+                    } else {
+                        url = `${baseUrl || 'https://api.openai.com/v1'}/chat/completions`;
+                        if (apiKey) {
+                            chatHeaders.Authorization = `Bearer ${apiKey}`;
+                        }
+                        bodyObj = {
+                            model: chatModel,
+                            messages,
+                            stream: true,
+                            ...(baseUrl ? { reasoning_effort: 'none' } : {}),
+                        };
+                    }
+
+                    const body = JSON.stringify(bodyObj);
+                    const bodyBuffer = Buffer.from(body, 'utf8');
+                    chatHeaders['Content-Length'] = bodyBuffer.length;
+
+                    let urlObj: URL;
+                    try {
+                        urlObj = new URL(url);
+                    } catch {
+                        void this.setStateAsync(streamStateId, JSON.stringify({ requestId, content: '', done: true, error: `Invalid API URL: ${url}` }), true);
+                        return;
+                    }
+                    const isHttps = urlObj!.protocol === 'https:';
+                    const requestModule = isHttps ? https : http;
+
+                    let fullContent = '';
+                    const req = requestModule.request(
+                        url,
+                        {
+                            method: 'POST',
+                            headers: chatHeaders,
+                            timeout: 600000,
+                            ...(isHttps && this.config.allowSelfSignedCerts ? { rejectUnauthorized: false } : {}),
+                        },
+                        res => {
+                            if (res.statusCode !== 200) {
+                                let errorData = '';
+                                res.on('data', (chunk: Buffer) => {
+                                    errorData += chunk.toString();
+                                });
+                                res.on('end', () => {
+                                    let detail: string;
+                                    try {
+                                        const errParsed = JSON.parse(errorData);
+                                        detail = errParsed.error?.message || errorData.substring(0, 200);
+                                    } catch {
+                                        detail = errorData.substring(0, 200);
+                                    }
+                                    void this.setStateAsync(
+                                        streamStateId,
+                                        JSON.stringify({ requestId, content: '', done: true, error: `${detail} (${res.statusCode})` }),
+                                        true,
+                                    );
+                                    // Cleanup state after delay
+                                    setTimeout(() => void this.delObjectAsync(streamStateId).catch(() => {}), 30000);
+                                });
+                                return;
+                            }
+
+                            let buffer = '';
+                            res.on('data', (chunk: Buffer) => {
+                                buffer += chunk.toString();
+                                // Process complete SSE lines
+                                const lines = buffer.split('\n');
+                                buffer = lines.pop() || '';
+
+                                for (const line of lines) {
+                                    const trimmed = line.trim();
+                                    if (!trimmed || trimmed.startsWith(':')) {
+                                        continue;
+                                    }
+                                    // Anthropic event lines
+                                    if (trimmed.startsWith('event:')) {
+                                        continue;
+                                    }
+                                    if (!trimmed.startsWith('data:')) {
+                                        continue;
+                                    }
+                                    const dataStr = trimmed.substring(5).trim();
+                                    if (dataStr === '[DONE]') {
+                                        continue;
+                                    }
+                                    try {
+                                        const parsed = JSON.parse(dataStr);
+                                        let delta = '';
+                                        if (provider === 'anthropic') {
+                                            // Anthropic streaming format
+                                            if (parsed.type === 'content_block_delta') {
+                                                delta = parsed.delta?.text || '';
+                                            }
+                                        } else {
+                                            // OpenAI / Gemini / DeepSeek format
+                                            delta = parsed.choices?.[0]?.delta?.content || '';
+                                        }
+                                        if (delta) {
+                                            fullContent += delta;
+                                            void this.setStateAsync(
+                                                streamStateId,
+                                                JSON.stringify({ requestId, content: fullContent, done: false }),
+                                                true,
+                                            );
+                                        }
+                                    } catch {
+                                        // ignore parse errors for individual chunks
+                                    }
+                                }
+                            });
+
+                            res.on('end', () => {
+                                // Process remaining buffer
+                                if (buffer.trim()) {
+                                    const dataStr = buffer.trim().startsWith('data:')
+                                        ? buffer.trim().substring(5).trim()
+                                        : buffer.trim();
+                                    if (dataStr && dataStr !== '[DONE]') {
+                                        try {
+                                            const parsed = JSON.parse(dataStr);
+                                            let delta = '';
+                                            if (provider === 'anthropic') {
+                                                if (parsed.type === 'content_block_delta') {
+                                                    delta = parsed.delta?.text || '';
+                                                }
+                                            } else {
+                                                delta = parsed.choices?.[0]?.delta?.content || '';
+                                            }
+                                            if (delta) {
+                                                fullContent += delta;
+                                            }
+                                        } catch {
+                                            // ignore
+                                        }
+                                    }
+                                }
+                                // Send final state
+                                void this.setStateAsync(
+                                    streamStateId,
+                                    JSON.stringify({ requestId, content: fullContent, done: true }),
+                                    true,
+                                );
+                                // Cleanup state after delay
+                                setTimeout(() => void this.delObjectAsync(streamStateId).catch(() => {}), 30000);
+                            });
+                        },
+                    );
+
+                    req.on('error', (err: Error) => {
+                        void this.setStateAsync(
+                            streamStateId,
+                            JSON.stringify({ requestId, content: '', done: true, error: `Connection failed: ${err.message}` }),
+                            true,
+                        );
+                        setTimeout(() => void this.delObjectAsync(streamStateId).catch(() => {}), 30000);
+                    });
+
+                    req.on('timeout', () => {
+                        req.destroy();
+                        void this.setStateAsync(
+                            streamStateId,
+                            JSON.stringify({ requestId, content: '', done: true, error: 'Connection timeout (600s)' }),
+                            true,
+                        );
+                        setTimeout(() => void this.delObjectAsync(streamStateId).catch(() => {}), 30000);
+                    });
+
+                    req.write(bodyBuffer);
+                    req.end();
+                    }); // end of setObjectNotExistsAsync.then()
                 }
                 break;
             }

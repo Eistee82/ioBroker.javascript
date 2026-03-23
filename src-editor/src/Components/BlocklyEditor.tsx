@@ -76,6 +76,7 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
     private ignoreChanges: boolean = false;
     private blinkBlock: any;
     private readonly onResizeBind: () => void;
+    private resizeObserver: ResizeObserver | null = null;
     private didUpdate: ReturnType<typeof setTimeout> | null = null;
     private lastCommand = '';
     private lastSearch: string;
@@ -406,6 +407,20 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
         return null;
     }
 
+    /** Append Blockly XML blocks to the workspace (used by AI Chat) */
+    public appendBlocksFromXml(xml: string): void {
+        this.onImportBlocks(xml);
+    }
+
+    /** Get the current workspace XML (used by AI Chat for diff) */
+    public getWorkspaceXml(): string {
+        if (!this.blocklyWorkspace) {
+            return '';
+        }
+        const dom = BlocklyEditor.Blockly.Xml.workspaceToDom(this.blocklyWorkspace);
+        return BlocklyEditor.Blockly.Xml.domToPrettyText(dom);
+    }
+
     blocklyCode2JSCode(oneWay?: boolean): string {
         if (!this.blocklyWorkspace) {
             return '';
@@ -535,6 +550,11 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
         }
 
         window.addEventListener('resize', this.onResizeBind, false);
+        // Live resize when parent container changes (e.g. splitter drag)
+        if (!this.resizeObserver && this.blockly) {
+            this.resizeObserver = new ResizeObserver(() => this.onResize());
+            this.resizeObserver.observe(this.blockly);
+        }
         toolboxText = toolboxText || (await this.getToolbox());
         toolboxXml = toolboxXml || BlocklyEditor.Blockly.utils.xml.textToDom(toolboxText);
 
@@ -633,6 +653,10 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
         this.changeTimer && clearTimeout(this.changeTimer);
         this.changeTimer = null;
         window.removeEventListener('resize', this.onResizeBind);
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
     }
 
     onChange(): void {
