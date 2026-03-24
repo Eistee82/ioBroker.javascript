@@ -547,6 +547,7 @@ class JavaScript extends adapter_core_1.Adapter {
         }
         else if (obj?.type === 'script' && formerObj?.common) {
             // Script changed ...
+            this.log.debug(`${id}: onObjectChange script handler entered (enabled: ${formerObj.common.enabled} -> ${obj.common.enabled}, engine: ${formerObj.common.engine} -> ${obj.common.engine})`);
             if (checkIsGlobal(obj)) {
                 if (obj.common.enabled || formerObj.common.enabled) {
                     this.log.info(`Global Script ${id} updated. Restart instance.`);
@@ -581,6 +582,7 @@ class JavaScript extends adapter_core_1.Adapter {
                 else if (obj.common.engine === `system.adapter.${this.namespace}` ||
                     formerObj.common.engine === `system.adapter.${this.namespace}`) {
                     // Source changed => restart the script (only on the relevant instance)
+                    this.log.debug(`${id}: Restarting script (stopCounters=${this.stopCounters[id] || 0}, scripts[name]=${!!this.scripts[id]}, enabled: ${formerObj.common.enabled} -> ${obj.common.enabled}, engine: ${formerObj.common.engine} -> ${obj.common.engine})`);
                     this.stopCounters[id] = this.stopCounters[id] ? this.stopCounters[id] + 1 : 1;
                     void this.stopScript(id).then(() => {
                         // only start again after stop when "last" object change to prevent problems on
