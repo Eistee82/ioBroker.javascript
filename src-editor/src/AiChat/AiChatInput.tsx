@@ -155,6 +155,8 @@ const AiChatInput: React.FC<AiChatInputProps> = ({
         onSend(messageText);
         setText('');
         setMentionOpen(false);
+        // Re-focus input so user can keep typing
+        requestAnimationFrame(() => inputRef.current?.focus());
     }, [text, disabled, onSend, hasSelection, selectionText]);
 
     const insertMention = useCallback(
