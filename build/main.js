@@ -2395,6 +2395,11 @@ class JavaScript extends adapter_core_1.Adapter {
         }
     }
     async stopScript(name) {
+        if (!this.scripts[name]) {
+            this.log.debug(`${name}: Script not running, nothing to stop`);
+            await this.setState(`scriptEnabled.${name.substring(SCRIPT_CODE_MARKER.length)}`, false, true);
+            return false;
+        }
         this.log.info(`${name}: Stopping script`);
         await this.setState(`scriptEnabled.${name.substring(SCRIPT_CODE_MARKER.length)}`, false, true);
         if (this.messageBusHandlers[name]) {
