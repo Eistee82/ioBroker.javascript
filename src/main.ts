@@ -3087,6 +3087,7 @@ class JavaScript extends Adapter {
 
             if (obj.common.engineType.toLowerCase().startsWith('typescript')) {
                 // TypeScript
+                this.log.info(`${name}: Starting TypeScript (${obj.common.engineType})`);
                 this.log.info(`${name}: Compiling TypeScript source`);
                 // The source code must be transformed in order to support top level await
                 // and to force TypeScript to compile the code as a module
