@@ -61,7 +61,29 @@ const AiBlocklyPreview: React.FC<AiBlocklyPreviewProps> = ({ xml, themeType }) =
             }
 
             const dom = Blockly.utils.xml.textToDom(fullXml);
+
+            // Auto-arrange top-level blocks vertically so they don't overlap
+            // AI-generated blocks often all have x="0" y="0"
+            let yOffset = 10;
+            const topBlocks = Array.from(dom.querySelectorAll(':scope > block')) as Element[];
+            for (const block of topBlocks) {
+                block.setAttribute('x', '10');
+                block.setAttribute('y', String(yOffset));
+                yOffset += 200; // rough estimate, will be refined after render
+            }
+
             Blockly.Xml.domToWorkspace(dom, workspace);
+
+            // Refine layout: stack blocks with actual measured heights
+            const allTopBlocks = workspace.getTopBlocks(false);
+            if (allTopBlocks.length > 1) {
+                let currentY = 10;
+                for (const block of allTopBlocks) {
+                    const pos = block.getRelativeToSurfaceXY();
+                    block.moveBy(10 - pos.x, currentY - pos.y);
+                    currentY += block.getHeightWidth().height + 20;
+                }
+            }
 
             // Measure content bounding box
             const metrics = workspace.getBlocksBoundingBox();

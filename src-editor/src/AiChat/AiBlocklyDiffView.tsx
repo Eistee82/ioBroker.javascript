@@ -223,7 +223,37 @@ function injectWorkspace(container: HTMLDivElement, xmlStr: string, themeType: T
             fullXml = `<xml xmlns="https://developers.google.com/blockly/xml">${fullXml}</xml>`;
         }
         const dom = Blockly.utils.xml.textToDom(fullXml);
+
+        // Auto-arrange top-level blocks that share the same position (AI output)
+        const topBlocks = Array.from(dom.querySelectorAll(':scope > block')) as Element[];
+        if (topBlocks.length > 1) {
+            const positions = new Set<string>();
+            for (const block of topBlocks) {
+                positions.add(`${block.getAttribute('x') || '0'},${block.getAttribute('y') || '0'}`);
+            }
+            if (positions.size === 1) {
+                let yOff = 10;
+                for (const block of topBlocks) {
+                    block.setAttribute('x', '10');
+                    block.setAttribute('y', String(yOff));
+                    yOff += 200;
+                }
+            }
+        }
+
         Blockly.Xml.domToWorkspace(dom, workspace);
+
+        // Refine layout with actual block heights
+        const allTopBlocks = workspace.getTopBlocks(false);
+        if (allTopBlocks.length > 1) {
+            let curY = 10;
+            for (const block of allTopBlocks) {
+                const pos = block.getRelativeToSurfaceXY();
+                block.moveBy(10 - pos.x, curY - pos.y);
+                curY += block.getHeightWidth().height + 20;
+            }
+        }
+
         workspace.scrollCenter();
     } catch (e) {
         console.error('AiBlocklyDiffView: Error rendering XML:', e);

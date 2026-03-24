@@ -1858,7 +1858,39 @@ class Editor extends React.Component<EditorProps, EditorState> {
                                                     fullXml = `<xml xmlns="https://developers.google.com/blockly/xml">${fullXml}</xml>`;
                                                 }
                                                 const dom = Blockly.utils.xml.textToDom(fullXml);
+
+                                                // Auto-arrange top-level blocks that share the same position
+                                                const topBlocks = Array.from(dom.querySelectorAll(':scope > block')) as Element[];
+                                                if (topBlocks.length > 1) {
+                                                    const positions = new Set<string>();
+                                                    for (const block of topBlocks) {
+                                                        positions.add(
+                                                            `${block.getAttribute('x') || '0'},${block.getAttribute('y') || '0'}`,
+                                                        );
+                                                    }
+                                                    if (positions.size === 1) {
+                                                        let yOff = 10;
+                                                        for (const block of topBlocks) {
+                                                            block.setAttribute('x', '10');
+                                                            block.setAttribute('y', String(yOff));
+                                                            yOff += 200;
+                                                        }
+                                                    }
+                                                }
+
                                                 Blockly.Xml.domToWorkspace(dom, workspace);
+
+                                                // Refine: stack with actual measured block heights
+                                                const allTopWsBlocks = workspace.getTopBlocks(false);
+                                                if (allTopWsBlocks.length > 1) {
+                                                    let curY = 10;
+                                                    for (const block of allTopWsBlocks) {
+                                                        const pos = block.getRelativeToSurfaceXY();
+                                                        block.moveBy(10 - pos.x, curY - pos.y);
+                                                        curY += block.getHeightWidth().height + 20;
+                                                    }
+                                                }
+
                                                 // Convert workspace to JS+XML code and propagate to Editor
                                                 const newCode = ref.blocklyCode2JSCode();
                                                 this.onChange({ script: newCode });

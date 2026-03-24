@@ -496,7 +496,42 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
                 window.scripts.loading = true;
 
                 const xmlBlocks = BlocklyEditor.Blockly.utils.xml.textToDom(xml);
+
+                // Auto-arrange imported top-level blocks vertically
+                // AI-generated blocks often all have x="0" y="0" causing overlap
+                const topBlocksList = Array.from(xmlBlocks.querySelectorAll(':scope > block')) as Element[];
+                if (topBlocksList.length > 1) {
+                    // Check if all blocks share the same position (likely AI-generated)
+                    const positions = new Set<string>();
+                    for (const block of topBlocksList) {
+                        positions.add(`${block.getAttribute('x') || '0'},${block.getAttribute('y') || '0'}`);
+                    }
+                    if (positions.size === 1) {
+                        // All at same position - space them out with rough estimates
+                        let yOffset = parseInt(topBlocksList[0].getAttribute('y') || '0', 10);
+                        for (const block of topBlocksList) {
+                            block.setAttribute('y', String(yOffset));
+                            yOffset += 200;
+                        }
+                    }
+                }
+
                 BlocklyEditor.Blockly.Xml.appendDomToWorkspace(xmlBlocks, this.blocklyWorkspace);
+
+                // Refine layout: re-stack the newly added blocks with actual heights
+                if (topBlocksList.length > 1) {
+                    const wsTopBlocks = this.blocklyWorkspace.getTopBlocks(false);
+                    // The last N blocks are the ones we just added
+                    const newBlocks = wsTopBlocks.slice(-topBlocksList.length);
+                    if (newBlocks.length > 1) {
+                        let currentY = newBlocks[0].getRelativeToSurfaceXY().y;
+                        for (const block of newBlocks) {
+                            const pos = block.getRelativeToSurfaceXY();
+                            block.moveBy(0, currentY - pos.y);
+                            currentY += block.getHeightWidth().height + 20;
+                        }
+                    }
+                }
 
                 window.scripts.loading = false;
 
