@@ -495,6 +495,14 @@ class ScriptEditor extends React.Component<ScriptEditorProps, ScriptEditorState>
      *
      * @param text The text to add
      */
+    undo(): void {
+        this.editor?.trigger('toolbar', 'undo', null);
+    }
+
+    redo(): void {
+        this.editor?.trigger('toolbar', 'redo', null);
+    }
+
     insertTextIntoEditor(text: string): void {
         if (!this.editor || !this.monaco) {
             return;

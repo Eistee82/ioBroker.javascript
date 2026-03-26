@@ -417,6 +417,8 @@
     "Ask about your script...": "询问有关脚本的问题...",
     "Insert blocks": "插入积木块",
     "Apply blocks": "应用模块",
+    "Undo": "撤销",
+    "Redo": "重做",
     "Insert into editor": "插入编辑器",
     "Show as diff": "显示差异",
     "Selected code as context": "选中的代码作为上下文",

@@ -417,6 +417,8 @@
     "Ask about your script...": "Спросите о вашем скрипте...",
     "Insert blocks": "Вставить блоки",
     "Apply blocks": "Применить блоки",
+    "Undo": "Отменить",
+    "Redo": "Повторить",
     "Insert into editor": "Вставить в редактор",
     "Show as diff": "Показать как diff",
     "Selected code as context": "Выбранный код как контекст",

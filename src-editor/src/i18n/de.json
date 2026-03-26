@@ -392,6 +392,8 @@
     "Ask about your script...": "Frage zu deinem Script stellen...",
     "Insert blocks": "Blöcke einfügen",
     "Apply blocks": "Blöcke anwenden",
+    "Undo": "Rückgängig",
+    "Redo": "Wiederherstellen",
     "Insert into editor": "In Editor einfügen",
     "Show as diff": "Als Diff anzeigen",
     "Selected code as context": "Ausgewählter Code als Kontext",

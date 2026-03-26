@@ -47,6 +47,8 @@ import {
     MdBrightness4 as IconAstro,
     MdCode as IconCode,
     MdAutoFixHigh as IconWizard,
+    MdUndo as IconUndo,
+    MdRedo as IconRedo,
 } from 'react-icons/md';
 
 import {
@@ -83,6 +85,8 @@ import { decryptText, encryptText } from './Components/crypto';
 const BlocklyEditor = React.lazy(() => import('./Components/BlocklyEditor'));
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 type BlocklyEditorType = import('./Components/BlocklyEditor').default;
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+type ScriptEditorType = import('./Components/ScriptEditorVanillaMonaco').default;
 const RulesEditor = React.lazy(() => import('./Components/RulesEditor'));
 const Debugger = React.lazy(() => import('./Components/Debugger'));
 const ScriptEditorComponent = React.lazy(() => import('./Components/ScriptEditorVanillaMonaco'));
@@ -328,6 +332,7 @@ class Editor extends React.Component<EditorProps, EditorState> {
     private confirmCallback: null | ((result: boolean) => void) = null;
 
     private blocklyEditorRef = React.createRef<BlocklyEditorType>();
+    private scriptEditorRef = React.createRef<ScriptEditorType>();
 
     private lastKnownTs: Record<string, number> = {};
 
@@ -1426,6 +1431,42 @@ class Editor extends React.Component<EditorProps, EditorState> {
                             {I18n.t('Cancel')}
                         </Button>
                     ) : null}
+                    {!this.state.showCompiledCode && !this.state.rules ? (
+                        <IconButton
+                            key="undo"
+                            title={I18n.t('Undo')}
+                            style={styles.toolbarButtons}
+                            onClick={() => {
+                                if (this.state.blockly) {
+                                    const workspace = (this.blocklyEditorRef.current as any)?.blocklyWorkspace;
+                                    workspace?.undo(false);
+                                } else {
+                                    this.scriptEditorRef.current?.undo();
+                                }
+                            }}
+                            size="medium"
+                        >
+                            <IconUndo />
+                        </IconButton>
+                    ) : null}
+                    {!this.state.showCompiledCode && !this.state.rules ? (
+                        <IconButton
+                            key="redo"
+                            title={I18n.t('Redo')}
+                            style={styles.toolbarButtons}
+                            onClick={() => {
+                                if (this.state.blockly) {
+                                    const workspace = (this.blocklyEditorRef.current as any)?.blocklyWorkspace;
+                                    workspace?.undo(true);
+                                } else {
+                                    this.scriptEditorRef.current?.redo();
+                                }
+                            }}
+                            size="medium"
+                        >
+                            <IconRedo />
+                        </IconButton>
+                    ) : null}
                     <div style={{ flex: 2 }} />
                     {!this.props.debugInstance && !this.state.showCompiledCode && (
                         <IconButton
@@ -1695,6 +1736,7 @@ class Editor extends React.Component<EditorProps, EditorState> {
             const editor = (
                 <Suspense fallback={<Connecting />}>
                     <ScriptEditorComponent
+                        ref={this.scriptEditorRef}
                         key="scriptEditor1"
                         name={this.state.selected}
                         adapterName={this.props.adapterName}

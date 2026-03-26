@@ -392,6 +392,8 @@
     "Ask about your script...": "Ask about your script...",
     "Insert blocks": "Insert blocks",
     "Apply blocks": "Apply blocks",
+    "Undo": "Undo",
+    "Redo": "Redo",
     "Insert into editor": "Insert into editor",
     "Show as diff": "Show as diff",
     "Selected code as context": "Selected code as context",

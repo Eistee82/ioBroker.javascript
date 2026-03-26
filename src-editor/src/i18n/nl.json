@@ -417,6 +417,8 @@
     "Ask about your script...": "Stel een vraag over je script...",
     "Insert blocks": "Blokken invoegen",
     "Apply blocks": "Blokken toepassen",
+    "Undo": "Ongedaan maken",
+    "Redo": "Opnieuw",
     "Insert into editor": "In editor invoegen",
     "Show as diff": "Als diff tonen",
     "Selected code as context": "Geselecteerde code als context",

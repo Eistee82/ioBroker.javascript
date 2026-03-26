@@ -417,6 +417,8 @@
     "Ask about your script...": "Pregunta sobre tu script...",
     "Insert blocks": "Insertar bloques",
     "Apply blocks": "Aplicar bloques",
+    "Undo": "Deshacer",
+    "Redo": "Rehacer",
     "Insert into editor": "Insertar en el editor",
     "Show as diff": "Mostrar como diff",
     "Selected code as context": "Código seleccionado como contexto",
