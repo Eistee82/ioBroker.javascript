@@ -408,6 +408,10 @@ const AiChatInput: React.FC<AiChatInputProps> = ({
                     }}
                 >
                     {/* Mode selector */}
+                    <Tooltip
+                        title={I18n.t('Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts')}
+                        enterDelay={500}
+                    >
                     <Select
                         value={mode}
                         onChange={e => onModeChange(e.target.value as AiChatMode)}
@@ -454,6 +458,7 @@ const AiChatInput: React.FC<AiChatInputProps> = ({
                             💻 Code
                         </MenuItem>
                     </Select>
+                    </Tooltip>
 
                     {/* Model selector */}
                     <Select
@@ -500,7 +505,10 @@ const AiChatInput: React.FC<AiChatInputProps> = ({
                     </Select>
 
                     {/* @ context button */}
-                    <Tooltip title={I18n.t('Add context (@)')}>
+                    <Tooltip
+                        title={I18n.t('Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.')}
+                        enterDelay={500}
+                    >
                         <IconButton
                             size="small"
                             onClick={handleAtButtonClick}

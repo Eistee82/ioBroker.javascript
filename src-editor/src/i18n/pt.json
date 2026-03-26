@@ -396,6 +396,8 @@
     "for new line": "para nova linha",
     "for context": "para contexto",
     "Add context (@)": "Adicionar contexto (@)",
+    "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts": "Modo: Chat = apenas conversa, Agent = pode ler/analisar scripts, Code = pode ler e modificar scripts",
+    "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.": "Mencionar scripts como contexto para a IA. Use @todos para todos os scripts ou @nomeDoScript para um específico.",
     "Context": "Contexto",
     "current script": "script atual",
     "all scripts": "todos os scripts",

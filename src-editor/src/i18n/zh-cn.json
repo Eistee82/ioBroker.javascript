@@ -396,6 +396,8 @@
     "for new line": "换行",
     "for context": "添加上下文",
     "Add context (@)": "添加上下文 (@)",
+    "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts": "模式：Chat = 仅对话，Agent = 可读取/分析脚本，Code = 可读取和修改脚本",
+    "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.": "将脚本作为AI的上下文。使用 @全部 引用所有脚本，或 @脚本名称 引用特定脚本。",
     "Context": "上下文",
     "current script": "当前脚本",
     "all scripts": "所有脚本",

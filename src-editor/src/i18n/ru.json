@@ -396,6 +396,8 @@
     "for new line": "для новой строки",
     "for context": "для контекста",
     "Add context (@)": "Добавить контекст (@)",
+    "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts": "Режим: Chat = только разговор, Agent = может читать/анализировать скрипты, Code = может читать и изменять скрипты",
+    "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.": "Упомяните скрипты как контекст для ИИ. Используйте @все для всех скриптов или @имяСкрипта для конкретного.",
     "Context": "Контекст",
     "current script": "текущий скрипт",
     "all scripts": "все скрипты",

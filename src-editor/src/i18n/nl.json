@@ -396,6 +396,8 @@
     "for new line": "voor nieuwe regel",
     "for context": "voor context",
     "Add context (@)": "Context toevoegen (@)",
+    "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts": "Modus: Chat = alleen gesprek, Agent = kan scripts lezen/analyseren, Code = kan scripts lezen en wijzigen",
+    "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.": "Vermeld scripts als context voor de AI. Gebruik @alle voor alle scripts of @scriptnaam voor een specifiek script.",
     "Context": "Context",
     "current script": "huidig script",
     "all scripts": "alle scripts",

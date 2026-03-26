@@ -406,6 +406,8 @@
     "for new line": "for new line",
     "for context": "for context",
     "Add context (@)": "Add context (@)",
+    "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts": "Mode: Chat = conversation only, Agent = can read/analyze scripts, Code = can read and modify scripts",
+    "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.": "Mention scripts as context for the AI. Use @all for all scripts or @scriptName for a specific one.",
     "Context": "Context",
     "current script": "current script",
     "all scripts": "all scripts",
