@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Box, Avatar, Button, useTheme } from '@mui/material';
-import { Person, SmartToy, AddCircleOutline, CompareArrows } from '@mui/icons-material';
+import { Person, SmartToy, AddCircleOutline, PlaylistAddCheck } from '@mui/icons-material';
 import { I18n, type ThemeType } from '@iobroker/adapter-react-v5';
 import type { Theme } from '@mui/material/styles';
 
@@ -14,6 +14,7 @@ interface AiChatMessageProps {
     currentLanguage?: AiScriptLanguage;
     onInsertCode?: (code: string) => void;
     onShowDiff?: (code: string) => void;
+    onApplyCode?: (code: string) => void;
 }
 
 interface ContentPart {
@@ -311,6 +312,7 @@ const AiChatMessage: React.FC<AiChatMessageProps> = ({
     currentLanguage,
     onInsertCode,
     onShowDiff,
+    onApplyCode,
 }) => {
     const isUser = message.role === 'user';
     const theme = useTheme();
@@ -372,6 +374,18 @@ const AiChatMessage: React.FC<AiChatMessageProps> = ({
                                         themeType={themeType}
                                     />
                                     <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                                        {onApplyCode && (
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                color="primary"
+                                                startIcon={<PlaylistAddCheck sx={{ fontSize: 14 }} />}
+                                                onClick={() => onApplyCode(part.content)}
+                                                sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                                            >
+                                                {I18n.t('Apply blocks')}
+                                            </Button>
+                                        )}
                                         {onInsertCode && (
                                             <Button
                                                 size="small"
@@ -381,17 +395,6 @@ const AiChatMessage: React.FC<AiChatMessageProps> = ({
                                                 sx={{ textTransform: 'none', fontSize: '0.75rem' }}
                                             >
                                                 {I18n.t('Insert blocks')}
-                                            </Button>
-                                        )}
-                                        {onShowDiff && (
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                startIcon={<CompareArrows sx={{ fontSize: 14 }} />}
-                                                onClick={() => onShowDiff(part.content)}
-                                                sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-                                            >
-                                                {I18n.t('Show as diff')}
                                             </Button>
                                         )}
                                     </Box>

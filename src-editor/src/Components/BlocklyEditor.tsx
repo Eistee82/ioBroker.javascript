@@ -412,7 +412,184 @@ class BlocklyEditor extends React.Component<BlocklyEditorProps, BlocklyEditorSta
         this.onImportBlocks(xml);
     }
 
-    /** Get the current workspace XML (used by AI Chat for diff) */
+    /**
+     * Smart-apply AI-generated blocks: matched blocks are replaced, new blocks are appended.
+     * All operations are grouped so a single Ctrl+Z undoes everything.
+     */
+    public applyAiBlocks(xml: string): void {
+        if (!this.blocklyWorkspace) {
+            return;
+        }
+        xml = (xml || '').trim();
+        if (!xml) {
+            return;
+        }
+
+        try {
+            if (!xml.startsWith('<xml')) {
+                xml = `<xml xmlns="https://developers.google.com/blockly/xml">${xml}</xml>`;
+            }
+            xml = xml.replace(/[\n\r]/g, '').replace(/<variables>.*<\/variables>/g, '');
+
+            const aiDom = BlocklyEditor.Blockly.utils.xml.textToDom(xml);
+            const aiTopBlocks = Array.from(aiDom.querySelectorAll(':scope > block')) as Element[];
+            if (aiTopBlocks.length === 0) {
+                return;
+            }
+
+            // Create fingerprints for matching: block type + direct field values
+            const fingerprint = (blockEl: Element): string => {
+                const type = blockEl.getAttribute('type') || '';
+                const fields: string[] = [];
+                for (const child of Array.from(blockEl.children)) {
+                    if (child.tagName === 'field') {
+                        fields.push(`${child.getAttribute('name')}=${child.textContent}`);
+                    }
+                    if (child.tagName === 'mutation') {
+                        fields.push(`mut:${child.outerHTML}`);
+                    }
+                }
+                return `${type}|${fields.join(',')}`;
+            };
+
+            // Fingerprint workspace blocks via their XML serialization
+            const wsFingerprint = (block: any): string => {
+                const type: string = block.type || '';
+                const fields: string[] = [];
+                for (const input of block.inputList || []) {
+                    for (const field of input.fieldRow || []) {
+                        if (field.name && field.getValue) {
+                            fields.push(`${field.name}=${field.getValue()}`);
+                        }
+                    }
+                }
+                if (block.mutationToDom) {
+                    try {
+                        const mutation = block.mutationToDom();
+                        if (mutation) {
+                            fields.push(`mut:${mutation.outerHTML}`);
+                        }
+                    } catch {
+                        /* ignore */
+                    }
+                }
+                return `${type}|${fields.join(',')}`;
+            };
+
+            // Build fingerprints for AI blocks
+            const aiFps = aiTopBlocks.map(b => fingerprint(b));
+
+            // Get current workspace top-level blocks and their fingerprints
+            const wsTopBlocks = this.blocklyWorkspace.getTopBlocks(false);
+            const wsFps = wsTopBlocks.map((b: any) => wsFingerprint(b));
+            const wsMatched = new Array(wsTopBlocks.length).fill(false);
+
+            // Match AI blocks to workspace blocks by fingerprint (type + fields)
+            // Store the position of matched blocks for replacement
+            const matchPositions: Array<{ x: number; y: number } | null> = [];
+            for (let ai = 0; ai < aiFps.length; ai++) {
+                let found = false;
+                // First try exact fingerprint match
+                for (let ws = 0; ws < wsFps.length; ws++) {
+                    if (!wsMatched[ws] && aiFps[ai] === wsFps[ws]) {
+                        wsMatched[ws] = true;
+                        const pos = wsTopBlocks[ws].getRelativeToSurfaceXY();
+                        matchPositions.push({ x: pos.x, y: pos.y });
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    // Fallback: match by block type only
+                    const aiType = aiTopBlocks[ai].getAttribute('type') || '';
+                    for (let ws = 0; ws < wsTopBlocks.length; ws++) {
+                        if (!wsMatched[ws] && wsTopBlocks[ws].type === aiType) {
+                            wsMatched[ws] = true;
+                            const pos = wsTopBlocks[ws].getRelativeToSurfaceXY();
+                            matchPositions.push({ x: pos.x, y: pos.y });
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    matchPositions.push(null); // New block, no position yet
+                }
+            }
+
+            // Start undo group - use window.Blockly for full API access
+            const Blockly = (window as any).Blockly;
+            const groupId = Blockly.utils.idGenerator.genUid();
+            Blockly.Events.setGroup(groupId);
+
+            window.scripts.loading = true;
+
+            // Delete matched workspace blocks (they will be replaced)
+            for (let ws = 0; ws < wsTopBlocks.length; ws++) {
+                if (wsMatched[ws]) {
+                    wsTopBlocks[ws].dispose(false);
+                }
+            }
+
+            // Auto-arrange AI blocks that share positions
+            if (aiTopBlocks.length > 1) {
+                const positions = new Set<string>();
+                for (const block of aiTopBlocks) {
+                    positions.add(`${block.getAttribute('x') || '0'},${block.getAttribute('y') || '0'}`);
+                }
+                if (positions.size === 1) {
+                    let yOff = 10;
+                    for (const block of aiTopBlocks) {
+                        block.setAttribute('x', '10');
+                        block.setAttribute('y', String(yOff));
+                        yOff += 200;
+                    }
+                }
+            }
+
+            // Append all AI blocks to workspace
+            BlocklyEditor.Blockly.Xml.appendDomToWorkspace(aiDom, this.blocklyWorkspace);
+
+            // Position the newly added blocks
+            const allTopBlocks = this.blocklyWorkspace.getTopBlocks(false);
+            const newBlocks = allTopBlocks.slice(-aiTopBlocks.length);
+
+            // Calculate bottom of existing blocks for new block placement
+            let maxY = 10;
+            for (const block of allTopBlocks.slice(0, -aiTopBlocks.length)) {
+                const pos = block.getRelativeToSurfaceXY();
+                const hw = block.getHeightWidth();
+                maxY = Math.max(maxY, pos.y + hw.height + 30);
+            }
+
+            for (let i = 0; i < newBlocks.length; i++) {
+                const pos = matchPositions[i];
+                if (pos) {
+                    // Matched block: place at original position
+                    const cur = newBlocks[i].getRelativeToSurfaceXY();
+                    newBlocks[i].moveBy(pos.x - cur.x, pos.y - cur.y);
+                } else {
+                    // New block: place below existing blocks
+                    const cur = newBlocks[i].getRelativeToSurfaceXY();
+                    newBlocks[i].moveBy(10 - cur.x, maxY - cur.y);
+                    maxY += newBlocks[i].getHeightWidth().height + 20;
+                }
+            }
+
+            window.scripts.loading = false;
+
+            // End undo group
+            Blockly.Events.setGroup(false);
+
+            this.onBlocklyChanged();
+        } catch (e) {
+            window.scripts.loading = false;
+            (window as any).Blockly?.Events?.setGroup(false);
+            console.error('Error applying AI blocks:', e);
+        }
+    }
+
+    /** Get the current workspace XML (used by AI Chat) */
     public getWorkspaceXml(): string {
         if (!this.blocklyWorkspace) {
             return '';

@@ -89,7 +89,6 @@ const ScriptEditorComponent = React.lazy(() => import('./Components/ScriptEditor
 const DialogScriptEditor = React.lazy(() => import('./Dialogs/ScriptEditor'));
 const AiChatPanel = React.lazy(() => import('./AiChat/AiChatPanel'));
 const AiDiffView = React.lazy(() => import('./AiChat/AiDiffView'));
-const AiBlocklyDiffView = React.lazy(() => import('./AiChat/AiBlocklyDiffView'));
 
 import ReactSplit, { SplitDirection } from '@devbookhq/splitter';
 import { getAllScripts } from './AiChat/AiScriptAnalyzer';
@@ -287,7 +286,6 @@ interface EditorState {
     triggerPrettier: number;
     aiChatOpen: boolean;
     aiDiffView: { original: string; modified: string } | null;
-    aiBlocklyDiffView: { original: string; modified: string } | null;
     aiCompletionsEnabled: boolean;
     scriptConflict: string;
 }
@@ -378,7 +376,6 @@ class Editor extends React.Component<EditorProps, EditorState> {
             menuTabsOpened: false,
             aiChatOpen: window.localStorage.getItem('Editor.aiChatOpen') === 'true',
             aiDiffView: null,
-            aiBlocklyDiffView: null,
             aiCompletionsEnabled: window.localStorage.getItem('Editor.aiCompletions') !== 'false',
             triggerPrettier: 1,
             scriptConflict: '',
@@ -1831,83 +1828,6 @@ class Editor extends React.Component<EditorProps, EditorState> {
                 </Suspense>
             );
 
-            // Show Blockly diff view if active (blocklyEditor stays mounted behind it so ref stays valid)
-            if (this.state.aiBlocklyDiffView) {
-                return (
-                    <Box
-                        sx={styles.editorDiv}
-                        key="blocklyEditorDiv"
-                    >
-                        {/* Keep BlocklyEditor mounted but hidden so the workspace ref stays valid */}
-                        <Box sx={{ display: 'none' }}>{blocklyEditor}</Box>
-                        <Suspense fallback={<Connecting />}>
-                            <AiBlocklyDiffView
-                                originalXml={this.state.aiBlocklyDiffView.original}
-                                modifiedXml={this.state.aiBlocklyDiffView.modified}
-                                themeType={this.state.themeType}
-                                onAccept={xml => {
-                                    const ref = this.blocklyEditorRef.current;
-                                    if (ref) {
-                                        const Blockly = (window as any).Blockly;
-                                        const workspace = (ref as any).blocklyWorkspace;
-                                        if (Blockly && workspace) {
-                                            workspace.clear();
-                                            try {
-                                                let fullXml = xml;
-                                                if (!fullXml.startsWith('<xml')) {
-                                                    fullXml = `<xml xmlns="https://developers.google.com/blockly/xml">${fullXml}</xml>`;
-                                                }
-                                                const dom = Blockly.utils.xml.textToDom(fullXml);
-
-                                                // Auto-arrange top-level blocks that share the same position
-                                                const topBlocks = Array.from(dom.querySelectorAll(':scope > block')) as Element[];
-                                                if (topBlocks.length > 1) {
-                                                    const positions = new Set<string>();
-                                                    for (const block of topBlocks) {
-                                                        positions.add(
-                                                            `${block.getAttribute('x') || '0'},${block.getAttribute('y') || '0'}`,
-                                                        );
-                                                    }
-                                                    if (positions.size === 1) {
-                                                        let yOff = 10;
-                                                        for (const block of topBlocks) {
-                                                            block.setAttribute('x', '10');
-                                                            block.setAttribute('y', String(yOff));
-                                                            yOff += 200;
-                                                        }
-                                                    }
-                                                }
-
-                                                Blockly.Xml.domToWorkspace(dom, workspace);
-
-                                                // Refine: stack with actual measured block heights
-                                                const allTopWsBlocks = workspace.getTopBlocks(false);
-                                                if (allTopWsBlocks.length > 1) {
-                                                    let curY = 10;
-                                                    for (const block of allTopWsBlocks) {
-                                                        const pos = block.getRelativeToSurfaceXY();
-                                                        block.moveBy(10 - pos.x, curY - pos.y);
-                                                        curY += block.getHeightWidth().height + 20;
-                                                    }
-                                                }
-
-                                                // Convert workspace to JS+XML code and propagate to Editor
-                                                const newCode = ref.blocklyCode2JSCode();
-                                                this.onChange({ script: newCode });
-                                            } catch (e) {
-                                                console.error('Error loading XML into workspace:', e);
-                                            }
-                                        }
-                                    }
-                                    this.setState({ aiBlocklyDiffView: null });
-                                }}
-                                onReject={() => this.setState({ aiBlocklyDiffView: null })}
-                            />
-                        </Suspense>
-                    </Box>
-                );
-            }
-
             if (this.state.aiChatOpen) {
                 const savedSizes = window.localStorage.getItem('Editor.aiBlocklyChatSizes');
                 const initialSizes = savedSizes ? JSON.parse(savedSizes) : [70, 30];
@@ -1956,15 +1876,11 @@ class Editor extends React.Component<EditorProps, EditorState> {
                                             ref.appendBlocksFromXml(xml);
                                         }
                                     }}
-                                    onShowDiff={modifiedXml => {
+                                    onApplyCode={xml => {
                                         const ref = this.blocklyEditorRef.current;
-                                        const currentXml = ref?.getWorkspaceXml() || '';
-                                        this.setState({
-                                            aiBlocklyDiffView: {
-                                                original: currentXml,
-                                                modified: modifiedXml,
-                                            },
-                                        });
+                                        if (ref) {
+                                            ref.applyAiBlocks(xml);
+                                        }
                                     }}
                                     onClose={() => {
                                         window.localStorage.setItem('Editor.aiChatOpen', 'false');

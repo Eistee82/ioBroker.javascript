@@ -18,6 +18,7 @@ interface AiChatPanelProps {
     allScripts?: ScriptInfo[];
     onInsertCode?: (code: string) => void;
     onShowDiff?: (modifiedCode: string) => void;
+    onApplyCode?: (code: string) => void;
     onClose: () => void;
 }
 
@@ -31,6 +32,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
     allScripts,
     onInsertCode,
     onShowDiff,
+    onApplyCode,
     onClose,
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,13 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
             onShowDiff?.(code);
         },
         [onShowDiff],
+    );
+
+    const handleApplyCode = useCallback(
+        (code: string) => {
+            onApplyCode?.(code);
+        },
+        [onApplyCode],
     );
 
     return (
@@ -226,6 +235,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({
                             currentLanguage={currentLanguage}
                             onInsertCode={handleInsertCode}
                             onShowDiff={handleShowDiff}
+                            onApplyCode={handleApplyCode}
                         />
                     ))}
 
